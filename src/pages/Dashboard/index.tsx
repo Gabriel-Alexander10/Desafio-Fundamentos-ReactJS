@@ -29,13 +29,60 @@ interface Balance {
   total: string;
 }
 
+interface FormatedData {
+  transactionsData: Transaction[];
+  balanceData: Balance;
+}
+
 const Dashboard: React.FC = () => {
-  // const [transactions, setTransactions] = useState<Transaction[]>([]);
-  // const [balance, setBalance] = useState<Balance>({} as Balance);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [balance, setBalance] = useState<Balance>({} as Balance);
+
+  function FormatData(
+    transactionsData: Transaction[],
+    balanceData: Balance,
+  ): FormatedData {
+    const formattedTransactions = transactionsData.map(transaction => {
+      const formattedTransaction = transaction;
+
+      formattedTransaction.formattedValue =
+        (formattedTransaction.type === 'outcome' ? '- ' : '') +
+        formatValue(Number(formattedTransaction.value));
+
+      const date = new Date(formattedTransaction.created_at).toLocaleDateString(
+        'pt-br',
+      );
+
+      formattedTransaction.formattedDate = date;
+
+      return formattedTransaction;
+    });
+
+    const formattedBalance = balanceData;
+    formattedBalance.income = formatValue(Number(formattedBalance.income));
+    formattedBalance.outcome = formatValue(Number(formattedBalance.outcome));
+    formattedBalance.total = formatValue(Number(formattedBalance.total));
+
+    return {
+      transactionsData: formattedTransactions,
+      balanceData: formattedBalance,
+    };
+  }
 
   useEffect(() => {
     async function loadTransactions(): Promise<void> {
-      // TODO
+      const response = await api.get('/transactions');
+
+      // eslint-disable-next-line no-console
+      console.log(response.data);
+
+      const { transactionsData, balanceData } = FormatData(
+        response.data.transactions,
+        response.data.balance,
+      );
+
+      setTransactions(transactionsData);
+      setBalance(balanceData);
     }
 
     loadTransactions();
@@ -43,7 +90,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <>
-      <Header />
+      <Header size="large" />
       <Container>
         <CardContainer>
           <Card>
@@ -51,21 +98,21 @@ const Dashboard: React.FC = () => {
               <p>Entradas</p>
               <img src={income} alt="Income" />
             </header>
-            <h1 data-testid="balance-income">R$ 5.000,00</h1>
+            <h1 data-testid="balance-income">{balance.income}</h1>
           </Card>
           <Card>
             <header>
               <p>Saídas</p>
               <img src={outcome} alt="Outcome" />
             </header>
-            <h1 data-testid="balance-outcome">R$ 1.000,00</h1>
+            <h1 data-testid="balance-outcome">{balance.outcome}</h1>
           </Card>
           <Card total>
             <header>
               <p>Total</p>
               <img src={total} alt="Total" />
             </header>
-            <h1 data-testid="balance-total">R$ 4000,00</h1>
+            <h1 data-testid="balance-total">{balance.total}</h1>
           </Card>
         </CardContainer>
 
@@ -81,7 +128,17 @@ const Dashboard: React.FC = () => {
             </thead>
 
             <tbody>
-              <tr>
+              {transactions.map(transaction => (
+                <tr key={transaction.id}>
+                  <td className="title">{transaction.title}</td>
+                  <td className={transaction.type}>
+                    {transaction.formattedValue}
+                  </td>
+                  <td>{transaction.category.title}</td>
+                  <td>{transaction.formattedDate}</td>
+                </tr>
+              ))}
+              {/* <tr>
                 <td className="title">Computer</td>
                 <td className="income">R$ 5.000,00</td>
                 <td>Sell</td>
@@ -92,7 +149,7 @@ const Dashboard: React.FC = () => {
                 <td className="outcome">- R$ 1.000,00</td>
                 <td>Hosting</td>
                 <td>19/04/2020</td>
-              </tr>
+              </tr> */}
             </tbody>
           </table>
         </TableContainer>
